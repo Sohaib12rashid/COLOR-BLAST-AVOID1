@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>COLOR BLAST AVOID - Mobile Game</title>
+    <meta name="description" content="Click colorful targets, avoid black bombs! A fun reaction game for mobile and desktop.">
+    <meta name="theme-color" content="#0f0f1a">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0f0f1a;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+        .sponsor-container {
+            width: 100%;
+            height: auto;
+            min-height: 50px;
+            margin: 10px auto;
+            background: #1a1a2e;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #777;
+            padding: 8px;
+        }
+        h1 {
+            margin: 5px 0;
+            color: #FFD700;
+            font-size: clamp(1.5rem, 6vw, 2rem);
+        }
+        p {
+            font-size: clamp(0.9rem, 4vw, 1.1rem);
+            margin: 5px 0 15px;
+        }
+        #game {
+            width: 100%;
+            height: 50vh;
+            max-height: 400px;
+            min-height: 250px;
+            background: #1a1a2e;
+            border-radius: 15px;
+            margin: 10px auto;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .object {
+            position: absolute;
+            border-radius: 50%;
+            display: none;
+            transition: transform 0.1s;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .target {
+            box-shadow: 0 0 15px currentColor;
+        }
+        .bomb {
+            background: #333;
+            box-shadow: 0 0 20px #555;
+        }
+        #start-btn {
+            background: #4CAF50;
+            border: none;
+            padding: 12px 25px;
+            font-size: clamp(1rem, 4vw, 1.2rem);
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+            width: 80%;
+            max-width: 250px;
+            touch-action: manipulation;
+        }
+        #stats {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 10px auto;
+            width: 100%;
+            max-width: 500px;
+        }
+        #score, #level, #high-score {
+            font-size: clamp(0.9rem, 4vw, 1.1rem);
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            min-width: 100px;
+            flex: 1;
+        }
+        #timer {
+            font-size: clamp(1rem, 4vw, 1.2rem);
+            color: #FFD700;
+            margin: 10px;
+        }
+        #message {
+            font-size: clamp(0.9rem, 4vw, 1.1rem);
+            color: #00FF7F;
+            margin: 10px;
+            height: 20px;
+        }
+        .feedback-container {
+            width: 100%;
+            max-width: 300px;
+            margin: 20px auto;
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .feedback-container input, 
+        .feedback-container textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: none;
+            background: #2a2a3e;
+            color: white;
+        }
+        .feedback-container textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        .feedback-container button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            #game {
+                height: 55vh;
+            }
+            #start-btn {
+                padding: 12px 20px;
+                width: 90%;
+            }
+            #stats {
+                gap: 8px;
+            }
+            #score, #level, #high-score {
+                min-width: 80px;
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sponsor-container">
+        Enjoying the game? Consider supporting us!
+    </div>
+
+    <h1>🎨 COLOR BLAST AVOID</h1>
+    <p>Tap colorful circles, avoid black bombs!</p>
+    
+    <div id="game"></div>
+    
+    <div id="message"></div>
+    
+    <button id="start-btn">START GAME</button>
+    
+    <div id="stats">
+        <div id="score">Score: 0</div>
+        <div id="level">Level: 1</div>
+        <div id="high-score">High Score: 0</div>
+    </div>
+    
+    <div id="timer">Time: 30s</div>
+
+    <div class="feedback-container">
+        <form name="feedback" netlify>
+            <h3>Send us feedback!</h3>
+            <input type="email" name="email" placeholder="Your email (optional)">
+            <textarea name="message" placeholder="Your feedback"></textarea>
+            <button type="submit">Send Feedback</button>
+        </form>
+    </div>
+
+    <script>
+        // Elements
+        const gameArea = document.getElementById("game");
+        const startBtn = document.getElementById("start-btn");
+        const scoreDisplay = document.getElementById("score");
+        const levelDisplay = document.getElementById("level");
+        const highScoreDisplay = document.getElementById("high-score");
+        const timerDisplay = document.getElementById("timer");
+        const messageDisplay = document.getElementById("message");
+
+        // Game variables
+        let score = 0;
+        let highScore = localStorage.getItem("highScore") || 0;
+        let level = 1;
+        let timeLeft = 30;
+        let gameActive = false;
+        let timer;
+        let objects = [];
+        const colors = ['#FF5252', '#4CAF50', '#2196F3', '#FFEB3B', '#9C27B0'];
+        
+        // Initialize
+        highScoreDisplay.textContent = `High Score: ${highScore}`;
+
+        // Event listeners
+        startBtn.addEventListener("click", startGame);
+        startBtn.addEventListener("touchstart", startGame, {passive: true});
+
+        // Start game
+        function startGame() {
+            if (gameActive) return;
+            resetGame();
+            gameActive = true;
+            startBtn.textContent = "PLAYING...";
+            timer = setInterval(updateTimer, 1000);
+            spawnObjects();
+        }
+
+        // Create objects (targets + bombs)
+        function spawnObjects() {
+            if (!gameActive) return;
+            
+            // Clear existing objects
+            gameArea.innerHTML = '';
+            objects = [];
+            
+            // Difficulty based on level
+            const targetCount = 3 + Math.floor(level * 0.5);
+            const bombCount = Math.max(1, Math.floor(level * 0.3));
+            const objectSize = Math.max(30, 60 - level * 2);
+            
+            // Mobile adjustments
+            const isMobile = window.innerWidth <= 600;
+            const adjustedSize = isMobile ? Math.max(40, objectSize) : objectSize;
+            const adjustedTargetCount = isMobile ? targetCount + 1 : targetCount;
+            
+            // Create targets
+            for (let i = 0; i < adjustedTargetCount; i++) {
+                createObject(false, adjustedSize);
+            }
+            
+            // Create bombs
+            for (let i = 0; i < bombCount; i++) {
+                createObject(true, adjustedSize);
+            }
+            
+            // Respawn every 2 seconds (faster at higher levels)
+            setTimeout(spawnObjects, 2000 - (level * 50));
+        }
+
+        // Create single object (target or bomb)
+        function createObject(isBomb, size) {
+            const obj = document.createElement("div");
+            obj.className = `object ${isBomb ? 'bomb' : 'target'}`;
+            obj.style.width = `${size}px`;
+            obj.style.height = `${size}px`;
+            
+            if (isBomb) {
+                obj.style.background = '#333';
+                obj.addEventListener("click", () => hitBomb(obj));
+                obj.addEventListener("touchend", () => hitBomb(obj), {passive: true});
+            } else {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                obj.style.background = color;
+                obj.style.color = color;
+                obj.addEventListener("click", () => hitTarget(obj));
+                obj.addEventListener("touchend", () => hitTarget(obj), {passive: true});
+            }
+            
+            positionObject(obj);
+            gameArea.appendChild(obj);
+            objects.push(obj);
+        }
+
+        // Position object randomly
+        function positionObject(obj) {
+            const size = parseInt(obj.style.width);
+            const maxX = gameArea.offsetWidth - size;
+            const maxY = gameArea.offsetHeight - size;
+            
+            // Ensure objects don't spawn too close to edges on mobile
+            const buffer = window.innerWidth <= 600 ? 15 : 5;
+            const x = Math.max(buffer, Math.random() * (maxX - buffer));
+            const y = Math.max(buffer, Math.random() * (maxY - buffer));
+            
+            obj.style.left = `${x}px`;
+            obj.style.top = `${y}px`;
+            obj.style.display = "block";
+        }
+
+        // Hit target
+        function hitTarget(obj) {
+            if (!gameActive) return;
+            
+            // Vibrate on mobile if supported
+            if (navigator.vibrate) navigator.vibrate(30);
+            
+            // Animate and remove
+            obj.style.transform = 'scale(1.5)';
+            obj.style.opacity = '0';
+            setTimeout(() => {
+                if (obj.parentNode) obj.parentNode.removeChild(obj);
+            }, 200);
+            
+            // Update score
+            score += level; // More points at higher levels
+            scoreDisplay.textContent = `Score: ${score}`;
+            
+            // Level up every 15 points
+            if (score >= level * 15) {
+                level++;
+                levelDisplay.textContent = `Level: ${level}`;
+                showMessage(`LEVEL ${level}!`);
+            }
+        }
+
+        // Hit bomb
+        function hitBomb(obj) {
+            if (!gameActive) return;
+            
+            // Vibrate on mobile if supported
+            if (navigator.vibrate) navigator.vibrate(200);
+            
+            // Explosion effect
+            obj.style.background = '#ff0000';
+            obj.style.boxShadow = '0 0 30px #ff0000';
+            setTimeout(() => {
+                obj.style.transform = 'scale(2)';
+                obj.style.opacity = '0';
+            }, 100);
+            
+            showMessage("BOOM! GAME OVER");
+            endGame();
+        }
+
+        // Update timer
+        function updateTimer() {
+            timeLeft--;
+            timerDisplay.textContent = `Time: ${timeLeft}s`;
+            if (timeLeft <= 0) endGame();
+        }
+
+        // Show message
+        function showMessage(msg) {
+            messageDisplay.textContent = msg;
+            setTimeout(() => messageDisplay.textContent = "", 2000);
+        }
+
+        // End game
+        function endGame() {
+            clearInterval(timer);
+            gameActive = false;
+            startBtn.textContent = "PLAY AGAIN";
+            
+            // Remove all objects
+            gameArea.innerHTML = '';
+            objects = [];
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem("highScore", highScore);
+                highScoreDisplay.textContent = `High Score: ${highScore}`;
+                showMessage("NEW HIGH SCORE!");
+            }
+        }
+
+        // Reset game
+        function resetGame() {
+            score = 0;
+            level = 1;
+            timeLeft = 30;
+            scoreDisplay.textContent = `Score: ${score}`;
+            levelDisplay.textContent = `Level: ${level}`;
+            timerDisplay.textContent = `Time: ${timeLeft}s`;
+        }
+
+        // Prevent touch scroll when tapping objects
+        document.addEventListener('touchmove', function(e) {
+            if (gameActive) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Service Worker Registration (for PWA capabilities)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
